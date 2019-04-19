@@ -29,42 +29,49 @@ model_drivers = [
 ]
 
 
+def get_regression_tests(reg_path):
+    regression_tests = collections.defaultdict(list)
+
+    model_configs = os.listdir(reg_path)
+    for config in model_configs:
+        config_path = os.path.join(reg_path, config)
+        for path, _, files in os.walk(config_path):
+            # TODO: symmetric and static support
+            compilers = tuple(
+                os.path.splitext(f)[1].lstrip('.')
+                for f in files if f.startswith('ocean.stats')
+            )
+            if compilers:
+                # Replace 'regressions' with 'MOM6-examples'
+                r_s = path.index('regressions')
+                r_e = r_s + len('regressions')
+                test_path = path[:r_s] + 'MOM6-examples' + path[r_e:]
+
+                regression_tests[config].append((path, test_path, compilers))
+
+    return regression_tests
+
 def regressions():
     base_path = os.getcwd()
-
-    # Generate list of tests based on existence of stat files
-    regressions = collections.defaultdict(list)
-
     regressions_path = os.path.join(base_path, 'regressions')
-    for driver in os.listdir(regressions_path):
-        driver_regpath = os.path.join(regressions_path, driver)
-        for path, dirs, files in os.walk(driver_regpath):
-            if any(f.startswith('ocean.stats') for f in os.listdir(path)):
-                expt_path = os.path.join(
-                    base_path,
-                    'MOM6-examples',
-                    path[1 + len(regressions_path):],
-                )
-                regressions[driver].append(expt_path)
+    regression_tests = get_regression_tests(regressions_path)
 
     # Check output
     if (verbose):
-        for driver in regressions:
+        for driver in regression_tests:
             print('{}: ['.format(driver))
-            for path in regressions[driver]:
+            for path in regression_tests[driver]:
                 print("    '{}',".format(path))
             print(']')
 
-    n_tests = sum(len(t) for t in regressions.values())
+    n_tests = sum(len(t) for t in regression_tests.values())
     print('Number of tests: {}'.format(n_tests))
-
-    sys.exit()
 
     # Temporarily dump output to /dev/null
     f_null = open(os.devnull, 'w')
 
-    for driver in model_drivers:
-        for test_path in regressions[driver]:
+    for reg_test in regression_tests:
+        for test_path, _, _ in regression_tests[driver]:
             layout_path = os.path.join(test_path, DOC_LAYOUT)
             params = parse_mom6_param(layout_path)
 
