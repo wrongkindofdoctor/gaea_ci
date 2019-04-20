@@ -11,9 +11,11 @@ SITE ?= ncrc
 # This does not invoke the shell, but adds a redundant slash (-_-)
 #BASE := $(dir $(realpath $(lastword $(MAKEFILE_LIST))))
 BASE := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
-LIST_PATHS := ${BASE}/src/mkmf/bin/list_paths
-MKMF := ${BASE}/src/mkmf/bin/mkmf
-TEMPLATES := ${BASE}/src/mkmf/templates
+REPO := ${BASE}/MOM6-examples
+LIST_PATHS := ${REPO}/src/mkmf/bin/list_paths
+MKMF := ${REPO}/src/mkmf/bin/mkmf
+TEMPLATES := ${REPO}/src/mkmf/templates
+
 ENVIRONS := ${BASE}/environs
 
 # "Lazy" evaluation of current build directory
@@ -29,7 +31,7 @@ shared: $(foreach c, ${COMPILERS}, $c/shared)
 	mkdir -p ${BUILD}
 	rm -f ${BUILD}/path_names
 	cd ${BUILD} && ${LIST_PATHS} \
-		-l ${BASE}/src/MOM6/{config_src/dynamic,config_src/solo_driver,src/{*,*/*}}
+		-l ${REPO}/src/MOM6/{config_src/dynamic,config_src/solo_driver,src/{*,*/*}}
 	cd ${BUILD} && ${MKMF} \
 		-t ${TEMPLATES}/${SITE}-$*.mk \
 		-o '-I ${BASE}/build/$*/shared/repro' \
@@ -49,9 +51,9 @@ shared: $(foreach c, ${COMPILERS}, $c/shared)
 	rm -f ${BUILD}/path_names
 	cd ${BUILD} && ${LIST_PATHS} \
 		-l \
-			${BASE}/src/MOM6/config_src/{dynamic,coupled_driver} \
-			${BASE}/src/MOM6/src/{*,*/*}/ \
-			${BASE}/src/{atmos_null,coupler,land_null,ice_ocean_extras,icebergs,SIS2,FMS/coupler,FMS/include}
+			${REPO}/src/MOM6/config_src/{dynamic,coupled_driver} \
+			${REPO}/src/MOM6/src/{*,*/*}/ \
+			${REPO}/src/{atmos_null,coupler,land_null,ice_ocean_extras,icebergs,SIS2,FMS/coupler,FMS/include}
 	cd ${BUILD} && ${MKMF} \
 		-t ${TEMPLATES}/${SITE}-$*.mk \
 		-o '-I ${BASE}/build/$*/shared/repro' \
@@ -70,7 +72,7 @@ shared: $(foreach c, ${COMPILERS}, $c/shared)
 	mkdir -p ${BUILD}
 	rm -f ${BUILD}/path_names
 	cd ${BUILD} && ${LIST_PATHS} \
-		-l ${BASE}/src/FMS
+		-l ${REPO}/src/FMS
 	cd ${BUILD} && ${MKMF} \
 		-t ${TEMPLATES}/${SITE}-$*.mk \
 		-p libfms.a \
