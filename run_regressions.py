@@ -8,8 +8,9 @@ import shutil
 import subprocess
 
 
+NPROC_MAX = 64
 DOC_LAYOUT = 'MOM_parameter_doc.layout'
-verbose = True
+verbose = False
 
 
 def regressions():
@@ -39,9 +40,9 @@ def regressions():
                 for reg_path, test_path in regression_tests[compiler][config]:
                     # Only do circle_obcs for symmetric domains
                     # TODO: Check for symmetric in MOM_parameters_doc.* ?
-                    if (os.path.basename(test_path) == 'circle_obcs' and
-                            build != 'symmetric'):
-                        continue
+                    #if (os.path.basename(test_path) == 'circle_obcs' and
+                    #        build != 'symmetric'):
+                    #    continue
 
                     test = RegressionTest()
                     test.refpath = reg_path
@@ -53,6 +54,11 @@ def regressions():
                     layout_path = os.path.join(test.runpath, DOC_LAYOUT)
                     params = parse_mom6_param(layout_path)
 
+                    # Dunno why this happens...
+                    if not any(p in params for p in ('NIPROC', 'NJPROC')):
+                        print('ERROR: {} missing CPU layout'.format(test.name))
+                        continue
+
                     ni = int(params['NIPROC'])
                     nj = int(params['NJPROC'])
                     nprocs = ni * nj
@@ -62,7 +68,7 @@ def regressions():
                     )
 
                     # For now just test 1-node jobs
-                    if nprocs <= 16:
+                    if nprocs <= NPROC_MAX:
                         # Set up output directories
                         # TODO: Ditch logpath, keep paths to stats file
                         test.logpath = os.path.join(base_path, 'output', config, test.name)
@@ -80,6 +86,7 @@ def regressions():
 
                         # Stage the Slurm command
                         srun_flags = ' '.join([
+                            '-mblock',
                             '--exclusive',
                             '-n {}'.format(nprocs),
                         ])
@@ -91,7 +98,7 @@ def regressions():
                         )
 
                         if (verbose):
-                            print('Running {}...'.format(test.name))
+                            print('    Starting {}...'.format(test.name))
 
                         proc = subprocess.Popen(
                             shlex.split(cmd),
@@ -101,6 +108,13 @@ def regressions():
                         test.process = proc
 
                         running_tests.append(test)
+                    else:
+                        pass
+                        print('{}: skipping {} ({} ranks)'.format(
+                            compiler, test.name, nprocs
+                        ))
+
+            print('{}: Running {} tests.'.format(compiler, len(running_tests)))
 
             # Wait for processes to complete
             # TODO: Cycle through and check them all, not just the first slow one
@@ -109,12 +123,12 @@ def regressions():
 
             # Check if any runs exited with an error
             if all(test.process.returncode == 0 for test in running_tests):
-                print('All tested completed!')
+                print('{}: Tests finished, no errors!'.format(compiler))
             else:
                 for test in running_tests:
                     if test.process.returncode != 0:
-                        print('Test {} failed with code {}'.format(
-                            test.name, test.process.returncode
+                        print('{}: Test {} failed with code {}'.format(
+                            compiler, test.name, test.process.returncode
                         ))
 
             # Process cleanup
@@ -136,9 +150,17 @@ def regressions():
                 test.stdout.close()
                 test.stderr.close()
 
-            # Compare output
+            # Compare stats to reference
+            test_results = {}
             for test in running_tests:
-                print('{} Match?: {}'.format(test.name, test.check_stats()))
+                test_results[test.name] = test.check_stats()
+
+            if any(result == False for result in test_results.values()):
+                for test in test_results:
+                    if test_results[test] == False:
+                        print('FAIL: {}'.format(test))
+            else:
+                print('{}: No regressions, test passed!'.format(compiler))
 
 
 def get_regression_tests(reg_path, test_dirname='MOM6-examples'):
@@ -212,8 +234,7 @@ class RegressionTest(object):
         if self.stats:
             match = all(
                 filecmp.cmp(ref, stat)
-                for ref in ref_stats
-                for stat in self.stats
+                for ref, stat in zip(ref_stats, self.stats)
             )
         else:
             match = False
