@@ -1,0 +1,58 @@
+COMPILERS ?= gnu intel pgi
+MODES ?= repro debug
+GRIDS ?= symmetric dynamic_symmetric
+PROJECTS ?= shared ocean_only
+SITE ?= ncrc
+
+# Sometimes BASE will be the regression test suite dir
+BASE := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
+REPO := $(BASE)
+TEMPLATES := $(REPO)/src/mkmf/templates
+LIST_PATHS := $(REPO)/src/mkmf/bin/list_paths
+MKMF := $(REPO)/src/mkmf/bin/mkmf
+
+shared_src := \
+	src/FMS
+ocean_only_src := \
+	src/MOM6/config_src/dynamic \
+	src/MOM6/config_src/solo_driver \
+	src/MOM6/src
+
+shared_cpp = "-Duse_libMPI -Duse_netCDF -DSPMD"
+
+# Functions
+all_builds = $(foreach c, $(COMPILERS), $(foreach m, $(MODES), $(foreach g, $(GRIDS), build/$(c)/$(m)/$(g)/$(1)/$(2))))
+all_projects = $(foreach c, $(COMPILERS), $(foreach m, $(MODES), $(foreach g, $(GRIDS), $(foreach p, $(PROJECTS), build/$(c)/$(m)/$(g)/$(p)/$(1)))))
+compiler = $(word 2,$(subst /, ,$@))
+project = $(word 5,$(subst /, ,$@))
+
+# Rules
+
+all: $(foreach c, $(COMPILERS), $(foreach m, $(MODES), $(foreach g, $(GRIDS), build/$(c)/$(m)/$(g)/shared/Makefile)))
+
+# path_names
+$(call all_builds,shared,path_names): $(shared_src)
+$(call all_builds,ocean_only,path_names): $(ocean_only_src)
+$(call all_projects,path_names):
+	mkdir -p $(dir $@)
+	cd $(dir $@) && $(LIST_PATHS) -l $(addprefix $(REPO)/, $^)
+
+# Makefile
+$(call all_projects,Makefile) : %/Makefile : %/path_names
+	@echo "Doing $^"
+	cd $(dir $@) && $(MKMF) \
+		-t $(TEMPLATES)/$(SITE)-$(compiler).mk \
+		-p libfms.a \
+		-c $($(project)_cpp) \
+		$(notdir $<)
+
+$(call all_projects,libfms.a): %/libfms.a : %/Makefile
+	source $(ENVIRONs)/$(compiler).env && make \
+		-j \
+		-C $(dir $@) \
+		NETCDF=3 \
+		$($(mode)_flags) \
+		$(notdir $@)
+
+clean:
+	rm -rf build
