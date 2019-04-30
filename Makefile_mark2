@@ -1,13 +1,7 @@
-## Full build
-#COMPILERS ?= gnu intel pgi
-#MODES ?= repro debug
-#GRIDS ?= dynamic dynamic_symmetric
-#CONFIGURATIONS ?= ocean_only
-#SITE ?= ncrc
-
-# Lean build
+# Test executable builds
+# TODO: gnu/debug
 SITE ?= ncrc
-COMPILERS ?= gnu intel
+COMPILERS ?= gnu intel pgi
 MODES ?= repro
 GRIDS ?= dynamic_symmetric dynamic
 CONFIGURATIONS ?= \
@@ -172,16 +166,11 @@ $(call all_builds,shared,Makefile) : %/Makefile : %/path_names
 
 # Replace libfms with generic %/shared rule?
 # TODO: Merge with all_configs?
-$(call all_builds,ocean_only,Makefile): \
-	%/ocean_only/Makefile: %/shared/libfms.a
-$(call all_builds,ice_ocean_SIS2,Makefile): \
-	%/ice_ocean_SIS2/Makefile: %/shared/libfms.a
-$(call all_builds,land_ice_ocean_LM3_SIS2,Makefile): \
-	%/land_ice_ocean_LM3_SIS2/Makefile: %/shared/libfms.a
-$(call all_builds,coupled_AM2_LM3_SIS,Makefile): \
-	%/coupled_AM2_LM3_SIS/Makefile: %/shared/libfms.a
-$(call all_builds,coupled_AM2_LM3_SIS2,Makefile): \
-	%/coupled_AM2_LM3_SIS2/Makefile: %/shared/libfms.a
+$(call all_builds,ocean_only,Makefile): %/ocean_only/Makefile: %/shared/libfms.a
+$(call all_builds,ice_ocean_SIS2,Makefile): %/ice_ocean_SIS2/Makefile: %/shared/libfms.a
+$(call all_builds,land_ice_ocean_LM3_SIS2,Makefile): %/land_ice_ocean_LM3_SIS2/Makefile: %/shared/libfms.a
+$(call all_builds,coupled_AM2_LM3_SIS,Makefile): %/coupled_AM2_LM3_SIS/Makefile: %/shared/libfms.a
+$(call all_builds,coupled_AM2_LM3_SIS2,Makefile): %/coupled_AM2_LM3_SIS2/Makefile: %/shared/libfms.a
 
 # TODO: Define path to shared as function?
 $(call all_configs,Makefile): %/Makefile: %/path_names
@@ -194,7 +183,7 @@ $(call all_configs,Makefile): %/Makefile: %/path_names
 		$(notdir $<)
 
 
-# Binary builds
+# libfms.a and MOM6 builds
 $(call all_builds,shared,libfms.a): %/libfms.a: %/Makefile
 $(call all_configs,MOM6): %/MOM6: %/Makefile
 
