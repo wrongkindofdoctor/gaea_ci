@@ -12,7 +12,7 @@ import f90nml
 NPROCS_MAX = 480
 DOC_LAYOUT = 'MOM_parameter_doc.layout'
 verbose = False
-
+TEST_MODE = 'debug'
 
 def regressions():
     base_path = os.getcwd()
@@ -21,7 +21,7 @@ def regressions():
 
     # Check output
     if (verbose):
-        for compiler in regression_tests:
+        for compiler in ('gnu',):
             print('{}: ['.format(compiler))
             for config in regression_tests[compiler]:
                 print('    {}:'.format(config))
@@ -33,8 +33,9 @@ def regressions():
     n_tests = sum(len(t) for t in regression_tests['gnu'].values())
     print('Number of tests: {}'.format(n_tests))
 
-    for compiler in regression_tests:
-        for mode in ('repro',):
+    for compiler in ('gnu',):
+        # TODO: static, [no]symmetric, etc
+        for mode in (TEST_MODE,):
             running_tests = []
             for config in regression_tests[compiler]:
                 for reg_path, test_path in regression_tests[compiler][config]:
@@ -84,7 +85,7 @@ def regressions():
 
                     nprocs = (ocean_npes - n_mask) + atmos_npes
 
-                    for grid in ('dynamic', 'dynamic_symmetric'):
+                    for grid in ('dynamic_symmetric', ):
                         # OBC tests require symmetric grids
                         if (os.path.basename(test_path) == 'circle_obcs' and
                                 grid != 'dynamic_symmetric'):
