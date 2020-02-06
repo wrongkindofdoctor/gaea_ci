@@ -1,5 +1,4 @@
 # Test executable builds
-# TODO: gnu/debug
 SITE ?= ncrc
 COMPILERS ?= gnu intel pgi
 MODES ?= repro debug
@@ -9,6 +8,18 @@ CONFIGURATIONS ?= \
 	ice_ocean_SIS2 \
 	land_ice_ocean_LM3_SIS2 \
 	coupled_AM2_LM3_SIS \
+	coupled_AM2_LM3_SIS2
+
+# TODO: Merge into configurations?
+MOM6_CONFIGS = \
+	ocean_only
+
+SIS1_CONFIGS = \
+	coupled_AM2_LM3_SIS
+
+SIS2_CONFIGS = \
+	ice_ocean_SIS2 \
+	land_ice_ocean_LM3_SIS2 \
 	coupled_AM2_LM3_SIS2
 
 # Sometimes BASE will be the regression test suite dir
@@ -28,6 +39,15 @@ ocean_only_src = \
 	src/MOM6/config_src/solo_driver \
 	$(sort $(dir src/MOM6/src/*)) \
 	$(sort $(dir src/MOM6/src/*/*))
+#ice_ocean_SIS2_src = \
+#	src/MOM6/config_src/coupled_driver \
+#	$(sort $(dir src/MOM6/src/*)) \
+#	$(sort $(dir src/MOM6/src/*/*)) \
+#	src/coupler \
+#	src/atmos_null \
+#	src/land_null \
+#	src/icebergs src/ice_param src/SIS2 \
+#	src/FMS/coupler src/FMS/include
 ice_ocean_SIS2_src = \
 	src/MOM6/config_src/coupled_driver \
 	$(sort $(dir src/MOM6/src/*)) \
@@ -35,7 +55,7 @@ ice_ocean_SIS2_src = \
 	src/coupler \
 	src/atmos_null \
 	src/land_null \
-	src/icebergs src/ice_param src/SIS2 \
+	src/icebergs src/ice_param src/SIS2/src \
 	src/FMS/coupler src/FMS/include
 land_ice_ocean_LM3_SIS2_src = \
 	src/MOM6/config_src/coupled_driver \
@@ -44,7 +64,7 @@ land_ice_ocean_LM3_SIS2_src = \
 	src/coupler \
 	src/atmos_null \
 	src/LM3 \
-	src/icebergs src/ice_param src/SIS2 \
+	src/icebergs src/ice_param src/SIS2/src \
 	src/FMS/coupler src/FMS/include
 coupled_AM2_LM3_SIS_src = \
 	src/MOM6/config_src/coupled_driver \
@@ -66,7 +86,7 @@ coupled_AM2_LM3_SIS2_src = \
 	$(addprefix src/AM2/,$(addprefix atmos_fv_dynamics/, driver/coupled model tools)) \
 	src/atmos_param_am3 \
 	src/LM3 \
-	src/icebergs src/ice_param src/SIS2 \
+	src/icebergs src/ice_param src/SIS2/src \
 	src/FMS/coupler src/FMS/include
 
 # Track individual files
@@ -82,11 +102,16 @@ coupled_AM2_LM3_SIS_files = $(sort $(foreach d, $(coupled_AM2_LM3_SIS_src), $(sh
 coupled_AM2_LM3_SIS2_files = $(sort $(foreach d, $(coupled_AM2_LM3_SIS2_src), $(shell find $(d) -name '*.F90')))
 
 # MOM6 grid-specific source
-dynamic_src = \
+mom6_dynamic_src = \
 	src/MOM6/config_src/dynamic
-dynamic_symmetric_src = \
+mom6_dynamic_symmetric_src = \
 	src/MOM6/config_src/dynamic_symmetric
 
+# SIS2 grid-specific source
+sis2_dynamic_src = \
+	src/SIS2/config_src/dynamic
+sis2_dynamic_symmetric_src = \
+	src/SIS2/config_src/dynamic_symmetric
 
 # mkmf preprocessor flags
 shared_cpp = "-Duse_libMPI -Duse_netCDF -DSPMD"
@@ -103,8 +128,18 @@ all_builds = $(foreach c, $(COMPILERS), $(foreach m, $(MODES), $(foreach g, $(GR
 all_configs = $(foreach c, $(COMPILERS), $(foreach m, $(MODES), $(foreach g, $(GRIDS), $(foreach p, $(CONFIGURATIONS), build/$(c)/$(m)/$(g)/$(p)/$(1)))))
 all_projects = $(foreach c, $(COMPILERS), $(foreach m, $(MODES), $(foreach g, $(GRIDS), $(foreach p, $(CONFIGURATIONS) shared, build/$(c)/$(m)/$(g)/$(p)/$(1)))))
 
+# FMS projects
+fms_builds = $(foreach c, $(COMPILERS), $(foreach m, $(MODES), $(foreach g, $(GRIDS), build/$(c)/$(m)/$(g)/shared/$(1))))
+
+# MOM6 or MOM6-SIS1 executables
+mom6_builds = $(foreach c, $(COMPILERS), $(foreach m, $(MODES), $(foreach g, $(GRIDS), $(foreach p, $(SIS1_CONFIGS) $(MOM6_CONFIGS), build/$(c)/$(m)/$(g)/$(p)/$(1)))))
+
+# MOM6-SIS2 executables
+sis2_builds = $(foreach c, $(COMPILERS), $(foreach m, $(MODES), $(foreach g, $(GRIDS), $(foreach p, $(SIS2_CONFIGS), build/$(c)/$(m)/$(g)/$(p)/$(1)))))
+
 all_repro = $(foreach c, $(COMPILERS), $(foreach g, $(GRIDS), $(foreach p, $(CONFIGURATIONS), build/$(c)/repro/$(g)/$(p)/$(1))))
 all_debug = $(foreach g, $(GRIDS), $(foreach p, $(CONFIGURATIONS), build/gnu/debug/$(g)/$(p)/$(1)))
+
 
 # Target pathname parsing
 compiler = $(word 2,$(subst /, ,$@))
@@ -119,7 +154,7 @@ debug_flags = DEBUG=1
 
 
 # Rules
-.PHONY: all dev
+.PHONY: all dev debug
 
 # Development builds; swap with `all` for deployment
 dev: $(foreach c, $(CONFIGURATIONS), build/gnu/repro/dynamic_symmetric/$(c)/MOM6)
@@ -168,10 +203,31 @@ $(call all_builds,land_ice_ocean_LM3_SIS2,path_names): $(land_ice_ocean_LM3_SIS2
 $(call all_builds,coupled_AM2_LM3_SIS,path_names): $(coupled_AM2_LM3_SIS_src)
 $(call all_builds,coupled_AM2_LM3_SIS2,path_names): $(coupled_AM2_LM3_SIS2_src)
 
-$(call all_projects,path_names):
+
+$(call fms_builds,path_names):
 	mkdir -p $(dir $@)
 	cd $(dir $@) && $(LIST_PATHS) \
-		-l $(addprefix $(REPO)/, $^) $(addprefix $(REPO)/, $($(grid)_src))
+		-l $(addprefix $(REPO)/, $^)
+
+$(call mom6_builds,path_names):
+	mkdir -p $(dir $@)
+	cd $(dir $@) && $(LIST_PATHS) \
+		-l \
+			$(addprefix $(REPO)/, $^) \
+			$(addprefix $(REPO)/, $(mom6_$(grid)_src))
+
+$(call sis2_builds,path_names):
+	mkdir -p $(dir $@)
+	cd $(dir $@) && $(LIST_PATHS) \
+		-l \
+			$(addprefix $(REPO)/, $^) \
+			$(addprefix $(REPO)/, $(mom6_$(grid)_src)) \
+			$(addprefix $(REPO)/, $(sis2_$(grid)_src))
+
+#$(call all_projects,path_names):
+#	mkdir -p $(dir $@)
+#	cd $(dir $@) && $(LIST_PATHS) \
+#		-l $(addprefix $(REPO)/, $^) $(addprefix $(REPO)/, $($(grid)_src))
 
 
 # Makefile

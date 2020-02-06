@@ -10,6 +10,7 @@ import subprocess
 import f90nml
 
 NPROCS_MAX = 480
+#NPROCS_MAX = 32
 DOC_LAYOUT = 'MOM_parameter_doc.layout'
 verbose = False
 
@@ -30,7 +31,7 @@ def regressions():
                     print('        {}'.format(test))
             print(']')
 
-    n_tests = sum(len(t) for t in regression_tests['gnu'].values())
+    n_tests = sum(len(t) for t in regression_tests['pgi'].values())
     print('Number of tests: {}'.format(n_tests))
 
     for compiler in regression_tests:
@@ -84,7 +85,9 @@ def regressions():
 
                     nprocs = (ocean_npes - n_mask) + atmos_npes
 
-                    for grid in ('dynamic', 'dynamic_symmetric'):
+                    # XXX: I am running both in the same directory!!
+                    #for grid in ('dynamic', 'dynamic_symmetric'):
+                    for grid in ('dynamic_symmetric', ):
                         # OBC tests require symmetric grids
                         if (os.path.basename(test_path) == 'circle_obcs' and
                                 grid != 'dynamic_symmetric'):
