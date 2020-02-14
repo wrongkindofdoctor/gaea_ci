@@ -1,14 +1,14 @@
 # Test executable builds
 SITE ?= ncrc
-COMPILERS ?= gnu intel pgi
+COMPILERS ?= gnu #intel pgi
 MODES ?= repro debug
 GRIDS ?= dynamic_symmetric dynamic
 CONFIGURATIONS ?= \
 	ocean_only \
-	ice_ocean_SIS2 \
-	land_ice_ocean_LM3_SIS2 \
-	coupled_AM2_LM3_SIS \
-	coupled_AM2_LM3_SIS2
+	ice_ocean_SIS2 #\
+	#land_ice_ocean_LM3_SIS2 \
+	#coupled_AM2_LM3_SIS \
+	#coupled_AM2_LM3_SIS2
 
 # TODO: Merge into configurations?
 MOM6_CONFIGS = \
@@ -34,11 +34,12 @@ MKMF := $(REPO)/src/mkmf/bin/mkmf
 # Source trees
 # TODO: Bundle submodel directories together into variables
 shared_src = \
-	src/FMS
+	src/FMS 
 ocean_only_src = \
 	src/MOM6/config_src/solo_driver \
 	$(sort $(dir src/MOM6/src/*)) \
-	$(sort $(dir src/MOM6/src/*/*))
+	$(sort $(dir src/MOM6/src/*/*)) \
+	src/FMS/include
 #ice_ocean_SIS2_src = \
 #	src/MOM6/config_src/coupled_driver \
 #	$(sort $(dir src/MOM6/src/*)) \
@@ -52,42 +53,42 @@ ice_ocean_SIS2_src = \
 	src/MOM6/config_src/coupled_driver \
 	$(sort $(dir src/MOM6/src/*)) \
 	$(sort $(dir src/MOM6/src/*/*)) \
-	src/coupler \
+	src/FMScoupler/full src/FMScoupler/shared \
 	src/atmos_null \
 	src/land_null \
 	src/icebergs src/ice_param src/SIS2/src \
-	src/FMS/coupler src/FMS/include
+	src/FMS/include
 land_ice_ocean_LM3_SIS2_src = \
 	src/MOM6/config_src/coupled_driver \
 	$(sort $(dir src/MOM6/src/*)) \
 	$(sort $(dir src/MOM6/src/*/*)) \
-	src/coupler \
+	src/FMScoupler/full src/FMScoupler/shared \
 	src/atmos_null \
 	src/LM3 \
 	src/icebergs src/ice_param src/SIS2/src \
-	src/FMS/coupler src/FMS/include
+	src/FMS/include
 coupled_AM2_LM3_SIS_src = \
 	src/MOM6/config_src/coupled_driver \
 	$(sort $(dir src/MOM6/src/*)) \
 	$(sort $(dir src/MOM6/src/*/*)) \
-	src/coupler \
+	src/FMScoupler/full src/FMScoupler/shared \
 	$(addprefix src/AM2/,atmos_drivers/coupled atmos_shared_am3) \
 	$(addprefix src/AM2/,$(addprefix atmos_fv_dynamics/, driver/coupled model tools)) \
 	src/atmos_param_am3 \
 	src/LM3 \
 	src/ice_param src/SIS \
-	src/FMS/coupler src/FMS/include
+	src/FMS/include
 coupled_AM2_LM3_SIS2_src = \
 	src/MOM6/config_src/coupled_driver \
 	$(sort $(dir src/MOM6/src/*)) \
 	$(sort $(dir src/MOM6/src/*/*)) \
-	src/coupler \
+	src/FMScoupler/full src/FMScoupler/shared \
 	$(addprefix src/AM2/,atmos_drivers/coupled atmos_shared_am3) \
 	$(addprefix src/AM2/,$(addprefix atmos_fv_dynamics/, driver/coupled model tools)) \
 	src/atmos_param_am3 \
 	src/LM3 \
 	src/icebergs src/ice_param src/SIS2/src \
-	src/FMS/coupler src/FMS/include
+	src/FMS/include
 
 # Track individual files
 # TODO: Build up the sources first, by model (not project)
@@ -264,12 +265,13 @@ $(call all_builds,shared,libfms.a): %/libfms.a: %/Makefile
 $(call all_configs,MOM6): %/MOM6: %/Makefile
 
 $(call all_builds,shared,libfms.a) $(call all_configs,MOM6):
-	source $(ENVIRONS)/$(compiler).env && make \
+	make \
 		-j \
 		-C $(dir $@) \
 		NETCDF=3 \
 		$($(mode)_flags) \
 		$(notdir $@)
+
 
 
 clean:
