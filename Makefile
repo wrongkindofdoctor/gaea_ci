@@ -34,12 +34,12 @@ shared_files = $(sort $(foreach d, $(shared_src), $(shell find $(d) -name '*.F90
 ice_ocean_SIS2_files = $(sort $(foreach d, $(ice_ocean_SIS2_src), $(shell find $(d) -name '*.F90')))
 
 # MOM6 grid-specific source
-mom6_dynamic_src = ../src/MOM6/config_src/dynamic
-mom6_dynamic_symmetric_src = ../src/MOM6/config_src/dynamic_symmetric
+mom6_dynamic_src = src/MOM6/config_src/dynamic
+mom6_dynamic_symmetric_src = src/MOM6/config_src/dynamic_symmetric
 
 # SIS2 grid-specific source
-sis2_dynamic_src = ../src/SIS2/config_src/dynamic
-sis2_dynamic_symmetric_src = ../src/SIS2/config_src/dynamic_symmetric
+sis2_dynamic_src = src/SIS2/config_src/dynamic
+sis2_dynamic_symmetric_src = src/SIS2/config_src/dynamic_symmetric
 
 # mkmf preprocessor flags
 shared_cpp = "-Duse_libMPI -Duse_netCDF -DSPMD"
